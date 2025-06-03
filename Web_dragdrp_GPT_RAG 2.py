@@ -99,7 +99,7 @@ if uploaded_img:
         )
 
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-4o-2024-11-20",
             messages=[
                 {
                     "role": "user",
