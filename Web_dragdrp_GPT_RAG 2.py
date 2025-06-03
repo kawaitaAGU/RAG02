@@ -22,6 +22,9 @@ st.title("画像から問題を読み取り、RAG付きで自動解説")
 uploaded_img = st.file_uploader("問題画像をアップロード（.png, .jpg）", type=["png", "jpg", "jpeg"])
 
 if uploaded_img:
+    # === 画像を画面に表示 =========================================
+    st.image(uploaded_img, caption="アップロードされた画像", use_column_width=True)
+
     # === 画像base64をセッションに保存 =============================
     if 'b64_img' not in st.session_state:
         image = Image.open(uploaded_img).convert("RGB")
@@ -129,29 +132,4 @@ if uploaded_img:
         if overview_match:
             overview = overview_match.group(1).strip()
 
-        answer_match = re.search(r"【?正解】?\n?(.*?)(?=\n【|$)", result, re.DOTALL)
-        if answer_match:
-            answer = answer_match.group(1).strip()
-
-        choice_matches = re.findall(
-            r"^([①-⑤1-5a-eA-Eａ-ｅＡ-Ｅ])[:：]?\s*(.+?)(?=\n[①-⑤1-5a-eA-Eａ-ｅＡ-Ｅ][:：]|\n*$)",
-            result, re.MULTILINE | re.DOTALL
-        )
-        for label, text in choice_matches:
-            choices[label.strip()] = text.strip()
-
-        if overview:
-            st.markdown("### 📝 問題の概要")
-            st.markdown(overview)
-
-        if answer:
-            st.markdown("### ✅ 正解")
-            st.markdown(answer)
-
-        if choices:
-            st.markdown("### 🔍 選択肢の解説")
-            for label, text in choices.items():
-                st.markdown(f"**{label}**: {text}")
-        else:
-            st.markdown("### 📄 解説（分割できなかった場合）")
-            st.markdown(result)
+        answer_match = re.search(r"【?正解】?\n?(.*?)(?=\n
