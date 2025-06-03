@@ -31,7 +31,7 @@ if uploaded_img and uploaded_excel:
     # === GPT OCRで問題文抽出 ============================================
     with st.spinner("画像から問題文を抽出しています（GPT Vision）..."):
         extract_response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-4o-2024-11-20",
             messages=[
                 {
                     "role": "user",
