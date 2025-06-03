@@ -1,108 +1,117 @@
 import streamlit as st
 import base64
 import io
-from PIL import Image
 import pandas as pd
+from PIL import Image
 from openai import OpenAI
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-# APIキー取得
+# === OpenAIクライアント初期化（Secretsから） ============================
+if "OPENAI_API_KEY" not in st.secrets:
+    st.error("OPENAI_API_KEY が未設定です。StreamlitのSecretsに追加してください。")
+    st.stop()
+
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-# タイトル
-st.title("画像から問題を解釈し、回答と解説を生成")
+# === タイトルとアップロードUI ============================================
+st.title("画像から問題を読み取り、過去問と照合して解説を生成")
 
-# ファイルアップロード
-uploaded_file = st.file_uploader("問題画像をアップロードしてください", type=["jpg", "jpeg", "png"])
+uploaded_img = st.file_uploader("問題画像（.png, .jpg）をアップロード", type=["png", "jpg", "jpeg"])
+uploaded_excel = st.file_uploader("過去問Excelファイル（.xlsx）をアップロード", type=["xlsx"])
 
-# RAG用のデータ（Excel想定）
-@st.cache_data
-def load_rag_data():
-    return pd.read_excel("questions_db.xlsx")
-
-# OCR: GPT-4oに画像で読み取りさせる
-def extract_text_with_gpt(image_bytes):
-    base64_image = base64.b64encode(image_bytes).decode("utf-8")
-    image_input = {
-        "type": "image_url",
-        "image_url": {
-            "url": f"data:image/png;base64,{base64_image}"
-        }
-    }
-
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[
-            {
-                "role": "system",
-                "content": "あなたは画像から日本語の問題文を正確に読み取り、読み取ったテキストのみを出力するOCR専門家です。"
-            },
-            {
-                "role": "user",
-                "content": [image_input]
-            }
-        ],
-        max_tokens=1000
-    )
-    return response.choices[0].message.content.strip()
-
-# 類似問題検索（TF-IDF + cosine 類似度）
-def search_similar_questions(text, df, top_k=3):
-    vectorizer = TfidfVectorizer()
-    tfidf_matrix = vectorizer.fit_transform(df["question"])
-    query_vec = vectorizer.transform([text])
-    similarities = cosine_similarity(query_vec, tfidf_matrix).flatten()
-    top_indices = similarities.argsort()[::-1][:top_k]
-    return df.iloc[top_indices]
-
-# GPTによる問題文の解釈・解説・回答
-def explain_problem_with_gpt(problem_text, similar_questions_text):
-    prompt = f"""次の日本語の試験問題に対して、以下を行ってください：
-1. 問題全体の概要と意図の解説
-2. 正解の選択肢とその理由
-3. 各選択肢に対する個別の解説（正誤含む）
-
-問題文：
-{problem_text}
-
-参考にすべき類似問題（過去問）：
-{similar_questions_text}
-"""
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[
-            {"role": "system", "content": "あなたは試験問題を解釈して、専門的かつわかりやすく解説する教育者です。"},
-            {"role": "user", "content": prompt}
-        ],
-        max_tokens=2000
-    )
-    return response.choices[0].message.content.strip()
-
-# メイン処理
-if uploaded_file is not None:
-    st.image(uploaded_file, caption="アップロード画像", use_column_width=True)
-
-    # 画像をバイトに変換
-    image = Image.open(uploaded_file)
+if uploaded_img and uploaded_excel:
+    # === 画像→Base64エンコード ==========================================
+    image = Image.open(uploaded_img).convert("RGB")
     buffer = io.BytesIO()
     image.save(buffer, format="PNG")
-    img_bytes = buffer.getvalue()
+    b64_img = base64.b64encode(buffer.getvalue()).decode()
+    data_uri = f"data:image/png;base64,{b64_img}"
 
-    with st.spinner("GPTが画像を解析しています（OCR）..."):
-        extracted_text = extract_text_with_gpt(img_bytes)
-        st.subheader("抽出された問題文")
-        st.text_area("問題文", extracted_text, height=200)
+    # === GPT OCRで問題文抽出 ============================================
+    with st.spinner("画像から問題文を抽出しています（GPT Vision）..."):
+        extract_response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "image_url", "image_url": {"url": data_uri}},
+                        {"type": "text", "text": "この画像に書かれている問題文を読み取ってください。"}
+                    ]
+                }
+            ],
+            max_tokens=2000,
+            temperature=0.0
+        )
+        query_text = extract_response.choices[0].message.content.strip()
+        st.subheader("🔍 抽出された問題文")
+        st.text_area("問題文", query_text, height=200)
 
-    rag_df = load_rag_data()
-    similar_df = search_similar_questions(extracted_text, rag_df)
-    st.subheader("類似問題（RAG検索）")
-    st.dataframe(similar_df)
+    # === Excel読み込みと過去問抽出 =====================================
+    with st.spinner("Excelから類似問題を検索中（TF-IDF）..."):
+        df = pd.read_excel(uploaded_excel)
 
-    similar_text_concat = "\n\n".join(similar_df["question"].tolist())
+        corpus = []
+        index_to_row = []
+        for i, row in df.iterrows():
+            for cell in row:
+                if isinstance(cell, str) and len(cell) > 10:
+                    corpus.append(cell)
+                    index_to_row.append(i)
 
-    if st.button("GPTに解説を依頼"):
-        with st.spinner("GPTが解説を生成中..."):
-            explanation = explain_problem_with_gpt(extracted_text, similar_text_concat)
-            st.subheader("GPTによる解説と回答")
-            st.markdown(explanation)
+        if not corpus:
+            st.error("Excelから問題文候補が見つかりませんでした。")
+            st.stop()
+
+        vectorizer = TfidfVectorizer()
+        X = vectorizer.fit_transform(corpus + [query_text])
+        similarities = cosine_similarity(X[-1], X[:-1])[0]
+        top_indices = similarities.argsort()[-3:][::-1]
+
+        similar_questions = []
+        for idx in top_indices:
+            row = df.iloc[index_to_row[idx]]
+            text = corpus[idx]
+            choices = [str(cell) for cell in row if isinstance(cell, str) and 5 < len(cell) < 100 and cell != text]
+            if not choices:
+                choices = ["（選択肢情報が取得できませんでした）"]
+
+            correct = ""
+            for cell in row:
+                if isinstance(cell, str) and cell.strip().upper() in ['A', 'B', 'C', 'D', 'E']:
+                    correct = cell.strip().upper()
+                    break
+
+            qinfo = f"{text}\n選択肢:\n" + "\n".join(f"- {c}" for c in choices[:5])
+            if correct:
+                qinfo += f"\n正解と思われる選択肢: {correct}"
+            similar_questions.append(qinfo)
+
+        rag_text = "\n\n" + "\n\n".join(similar_questions)
+        st.subheader("📚 類似問題（RAG）")
+        for q in similar_questions:
+            st.markdown(f"```\n{q}\n```")
+
+    # === GPT解説ボタン ================================================
+    if st.button("📘 GPTに解説を依頼する"):
+        with st.spinner("GPTが問題の解釈と解説を生成中..."):
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "image_url", "image_url": {"url": data_uri}},
+                            {"type": "text", "text":
+                                f"今送った画像の問題の解説をしてください。正解を明示し、根拠を説明してください。\n\n"
+                                f"以下は過去問から抽出した類似問題情報です：{rag_text}"
+                            }
+                        ]
+                    }
+                ],
+                max_tokens=2000,
+                temperature=0.1
+            )
+            st.subheader("💡 GPTの解説結果")
+            st.markdown(response.choices[0].message.content.strip())
