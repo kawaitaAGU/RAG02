@@ -3,3 +3,4 @@ pillow
 pandas
 openai
 scikit-learn
+openpyxl 
