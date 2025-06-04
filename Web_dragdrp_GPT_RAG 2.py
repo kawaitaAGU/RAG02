@@ -23,12 +23,11 @@ st.title("画像から問題を読み取り、RAG付きで自動解説")
 uploaded_img = st.file_uploader("問題画像をアップロード（.png, .jpg）", type=["png", "jpg", "jpeg"])
 
 if uploaded_img:
+    # === セッション状態の初期化 ===============================
+    st.session_state['b64_img'] = None
+
     # === 画像を画面に表示 =========================================
     st.image(uploaded_img, caption="アップロードされた画像", use_column_width=True)
-
-    # === セッション状態を初期化 ===================================
-    st.session_state['b64_img'] = None
-    st.session_state['query_text'] = None
 
     # === 画像base64をセッションに保存 =============================
     image = Image.open(uploaded_img).convert("RGB")
@@ -55,7 +54,6 @@ if uploaded_img:
             temperature=0.0
         )
         query_text = extract_response.choices[0].message.content.strip()
-        st.session_state['query_text'] = query_text
         st.subheader("🔍 抽出された問題文")
         st.text_area("問題文", query_text, height=200)
 
@@ -98,12 +96,12 @@ if uploaded_img:
                 rag_text = "\n\n".join(similar_questions)
                 st.subheader("📚 類似問題（RAG）")
                 for q in similar_questions:
-                    st.markdown(f"```\n{q}\n```)"
+                    st.markdown(f"```\n{q}\n```")
     except Exception as e:
         st.warning(f"Excelファイルの読み込みに失敗しました。RAGなしで進めます。\n\n詳細: {e}")
         rag_text = ""
 
-    # === GPTによる解説生成（gpt-4.1） ============================
+    # === GPTによる解説生成（gpt-4.1） ====================
     with st.spinner("GPTが解説を生成中..."):
         prompt_text = (
             f"今送った画像の問題の解説をしてください。正解を明示し、根拠を説明してください。各選択肢に対する解説を書いてください。で、ある調で書いてください。"
