@@ -1,3 +1,4 @@
+#gpt-4.1
 import streamlit as st
 import base64
 import io
@@ -37,7 +38,7 @@ if uploaded_img:
     # === GPTでOCR（画像→テキスト） ===============================
     with st.spinner("画像から問題文を抽出中..."):
         extract_response = client.chat.completions.create(
-            model="gpt-4o-2024-11-20",
+            model="gpt-4.1",
             messages=[
                 {
                     "role": "user",
@@ -98,7 +99,7 @@ if uploaded_img:
         st.warning(f"Excelファイルの読み込みに失敗しました。RAGなしで進めます。\n\n詳細: {e}")
         rag_text = ""
 
-    # === GPTによる解説生成（gpt-4o-2024-11-20） ====================
+    # === GPTによる解説生成（gpt-4.1） ====================
     with st.spinner("GPTが解説を生成中..."):
         prompt_text = (
             f"今送った画像の問題の解説をしてください。正解を明示し、根拠を説明してください。各選択肢に対する解説を書いてください。で、ある調で書いてください。"
@@ -106,7 +107,7 @@ if uploaded_img:
         )
 
         response = client.chat.completions.create(
-            model="gpt-4o-2024-11-20",
+            model="gpt-4.1",
             messages=[
                 {
                     "role": "user",
