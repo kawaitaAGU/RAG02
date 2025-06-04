@@ -43,7 +43,7 @@ if uploaded_img:
                     "role": "user",
                     "content": [
                         {"type": "image_url", "image_url": {"url": data_uri}},
-                        {"type": "text", "text": "この画像に書かれている問題文を読み取ってください。"}
+                        {"type": "text", "text": "この画像に書かれている問題文と選択肢を読み取ってください。"}
                     ]
                 }
             ],
@@ -101,7 +101,7 @@ if uploaded_img:
     # === GPTによる解説生成（gpt-4o-2024-11-20） ====================
     with st.spinner("GPTが解説を生成中..."):
         prompt_text = (
-            f"今送った画像の問題の解説をしてください。正解を明示し、根拠を説明してください。"
+            f"今送った画像の問題の解説をしてください。正解を明示し、根拠を説明してください。各選択肢に対する解説を書いてください。"
             + (f"\n以下は過去問から抽出した類似問題情報です：\n{rag_text}" if rag_text else "")
         )
 
