@@ -1,4 +1,4 @@
-#gpt-4.1
+#gpt-4o-2024-11-20
 import streamlit as st
 import base64
 import io
@@ -23,7 +23,7 @@ st.title("画像から問題を読み取り、RAG付きで自動解説")
 uploaded_img = st.file_uploader("問題画像をアップロード（.png, .jpg）", type=["png", "jpg", "jpeg"])
 
 if uploaded_img:
-    # === セッション状態の初期化 ===============================
+    # === 新しい画像アップロード時にセッション初期化 ===============
     st.session_state['b64_img'] = None
 
     # === 画像を画面に表示 =========================================
@@ -40,7 +40,7 @@ if uploaded_img:
     # === GPTでOCR（画像→テキスト） ===============================
     with st.spinner("画像から問題文を抽出中..."):
         extract_response = client.chat.completions.create(
-            model="gpt-4.1",
+            model="gpt-4o-2024-11-20",
             messages=[
                 {
                     "role": "user",
@@ -96,12 +96,14 @@ if uploaded_img:
                 rag_text = "\n\n".join(similar_questions)
                 st.subheader("📚 類似問題（RAG）")
                 for q in similar_questions:
-                    st.markdown(f"```\n{q}\n```")
+                    st.markdown(f"```
+{q}
+```")
     except Exception as e:
         st.warning(f"Excelファイルの読み込みに失敗しました。RAGなしで進めます。\n\n詳細: {e}")
         rag_text = ""
 
-    # === GPTによる解説生成（gpt-4.1） ====================
+    # === GPTによる解説生成（gpt-4o-2024-11-20） ====================
     with st.spinner("GPTが解説を生成中..."):
         prompt_text = (
             f"今送った画像の問題の解説をしてください。正解を明示し、根拠を説明してください。各選択肢に対する解説を書いてください。で、ある調で書いてください。"
@@ -109,7 +111,7 @@ if uploaded_img:
         )
 
         response = client.chat.completions.create(
-            model="gpt-4.1",
+            model="gpt-4o-2024-11-20",
             messages=[
                 {
                     "role": "user",
