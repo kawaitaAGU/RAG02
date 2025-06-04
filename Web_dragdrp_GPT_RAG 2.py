@@ -23,8 +23,8 @@ st.title("画像から問題を読み取り、RAG付きで自動解説")
 uploaded_img = st.file_uploader("問題画像をアップロード（.png, .jpg）", type=["png", "jpg", "jpeg"])
 
 if uploaded_img:
-    # === 新しい画像アップロード時にセッション初期化 ===============
-    st.session_state['b64_img'] = None
+    # === セッション初期化（新しい画像アップロード時） =================
+    st.session_state.clear()
 
     # === 画像を画面に表示 =========================================
     st.image(uploaded_img, caption="アップロードされた画像", use_column_width=True)
@@ -96,9 +96,7 @@ if uploaded_img:
                 rag_text = "\n\n".join(similar_questions)
                 st.subheader("📚 類似問題（RAG）")
                 for q in similar_questions:
-                    st.markdown(f"```
-{q}
-```")
+                    st.markdown(f"```\n{q}\n```")
     except Exception as e:
         st.warning(f"Excelファイルの読み込みに失敗しました。RAGなしで進めます。\n\n詳細: {e}")
         rag_text = ""
