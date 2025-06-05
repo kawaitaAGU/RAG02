@@ -23,13 +23,10 @@ st.title("画像から問題を読み取り、RAG付きで自動解説")
 uploaded_img = st.file_uploader("問題画像をアップロード（.png, .jpg）", type=["png", "jpg", "jpeg"])
 
 if uploaded_img:
-    # === セッション初期化（新しい画像アップロード時） =================
     st.session_state.clear()
 
-    # === 画像を画面に表示 =========================================
     st.image(uploaded_img, caption="アップロードされた画像", use_column_width=True)
 
-    # === base64エンコードしてセッション保存 ========================
     image = Image.open(uploaded_img).convert("RGB")
     buffer = io.BytesIO()
     image.save(buffer, format="PNG")
