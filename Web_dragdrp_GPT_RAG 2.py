@@ -52,25 +52,25 @@ if uploaded_img:
         )
         query_text = extract_response.choices[0].message.content.strip()
 
-    # === sample.xlsx を読み込みしてRAG検索 ========================
+    # === sample.csv を読み込んでRAG処理 ==========================
     rag_text = ""
-    excel_path = Path("sample.xlsx")
-    if not excel_path.exists():
-        st.error("sample.xlsx が見つかりません。ファイルをアプリと同じフォルダに配置してください。")
+    csv_path = Path("sample.csv")
+    if not csv_path.exists():
+        st.error("sample.csv が見つかりません。ファイルをアプリと同じフォルダに配置してください。")
         st.stop()
 
     try:
         with st.spinner("過去問データから類似問題を検索中..."):
-            df = pd.read_excel(excel_path)
-            corpus, index_to_row = [], []
+            df = pd.read_csv(csv_path)
 
-            for i, row in df.iterrows():
-                for cell in row:
-                    if isinstance(cell, str) and len(cell) > 10:
-                        corpus.append(cell)
-                        index_to_row.append(i)
+            if "問題文" not in df.columns:
+                st.error("CSVファイルに '問題文' 列が含まれていません。")
+                st.stop()
 
-            if corpus:
+            corpus = df["問題文"].fillna("").tolist()
+            if not corpus or len(query_text.strip()) < 10:
+                st.warning("抽出された問題文が短すぎるか、空です。RAG検索をスキップします。")
+            else:
                 vectorizer = TfidfVectorizer()
                 X = vectorizer.fit_transform(corpus + [query_text])
                 similarities = cosine_similarity(X[-1], X[:-1])[0]
@@ -78,12 +78,12 @@ if uploaded_img:
 
                 similar_questions = []
                 for idx in top_indices:
-                    row = df.iloc[index_to_row[idx]]
-                    text = corpus[idx]
-                    choices = [str(cell) for cell in row if isinstance(cell, str) and 5 < len(cell) < 100 and cell != text]
-                    correct = next((cell.strip().upper() for cell in row if isinstance(cell, str) and cell.strip().upper() in ['A', 'B', 'C', 'D', 'E']), "")
+                    row = df.iloc[idx]
+                    qtext = row["問題文"]
+                    choices = [str(row[c]) for c in ['a', 'b', 'c', 'd', 'e'] if c in row and pd.notna(row[c])]
+                    correct = str(row["解答"]) if "解答" in row and pd.notna(row["解答"]) else ""
 
-                    qinfo = f"{text}\n選択肢:\n" + "\n".join(f"- {c}" for c in choices[:5])
+                    qinfo = f"{qtext}\n選択肢:\n" + "\n".join(f"- {c}" for c in choices)
                     if correct:
                         qinfo += f"\n正解と思われる選択肢: {correct}"
                     similar_questions.append(qinfo)
@@ -93,7 +93,7 @@ if uploaded_img:
                 for q in similar_questions:
                     st.markdown(f"```\n{q}\n```")
     except Exception as e:
-        st.warning(f"Excelファイルの読み込みに失敗しました。RAGなしで進めます。\n\n詳細: {e}")
+        st.warning(f"CSVファイルの読み込みに失敗しました。RAGなしで進めます。\n\n詳細: {e}")
         rag_text = ""
 
     # === GPTによる解説生成 =========================================
@@ -123,7 +123,6 @@ if uploaded_img:
 
         overview = ""
         answer = ""
-        choices = {}
 
         overview_match = re.search(r"【?問題の概要】?\n?(.*?)(?=\n【|$)", result, re.DOTALL)
         if overview_match:
@@ -133,15 +132,6 @@ if uploaded_img:
         if answer_match:
             answer = answer_match.group(1).strip()
 
-        choice_matches = re.findall(
-            r"^([①-⑤1-5a-eA-Eａ-ｅＡ-Ｅ])[:：]?\s*(.+?)(?=\n[①-⑤1-5a-eA-Eａ-ｅＡ-Ｅ][:：]|\n*$)",
-            result, re.MULTILINE | re.DOTALL
-        )
-
-        for label, text in choice_matches:
-            if len(text.strip()) >= 15:
-                choices[label.strip()] = text.strip()
-
         if overview:
             st.markdown("### 📝 問題の概要")
             st.markdown(overview)
@@ -150,7 +140,4 @@ if uploaded_img:
             st.markdown("### ✅ 正解")
             st.markdown(answer)
 
-        if choices and len(choices) >= 2:
-            st.markdown("### 🔍 選択肢の解説")
-            for label, text in choices.items():
-                st.markdown(f"**{label}**: {text}")
+        # 選択肢の解説は表示しない（完全にスキップ）
