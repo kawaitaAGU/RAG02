@@ -129,4 +129,28 @@ if uploaded_img:
         if overview_match:
             overview = overview_match.group(1).strip()
 
-        answer_match = re.search(r"【?正解】?\n?(.*?)(?=\n
+        answer_match = re.search(r"【?正解】?\n?(.*?)(?=\n【|$)", result, re.DOTALL)
+        if answer_match:
+            answer = answer_match.group(1).strip()
+
+        choice_matches = re.findall(
+            r"^([①-⑤1-5a-eA-Eａ-ｅＡ-Ｅ])[:：]?\s*(.+?)(?=\n[①-⑤1-5a-eA-Eａ-ｅＡ-Ｅ][:：]|\n*$)",
+            result, re.MULTILINE | re.DOTALL
+        )
+
+        for label, text in choice_matches:
+            if len(text.strip()) >= 15:
+                choices[label.strip()] = text.strip()
+
+        if overview:
+            st.markdown("### 📝 問題の概要")
+            st.markdown(overview)
+
+        if answer:
+            st.markdown("### ✅ 正解")
+            st.markdown(answer)
+
+        if choices and len(choices) >= 2:
+            st.markdown("### 🔍 選択肢の解説")
+            for label, text in choices.items():
+                st.markdown(f"**{label}**: {text}")
