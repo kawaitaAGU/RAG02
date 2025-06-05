@@ -88,10 +88,7 @@ if uploaded_img:
                     choices = [str(row[c]) for c in ['a', 'b', 'c', 'd', 'e'] if c in row and pd.notna(row[c])]
                     correct = str(row["解答"]) if "解答" in row and pd.notna(row["解答"]) else ""
 
-                    qinfo = f"{qtext}
-選択肢:
-" + "
-".join(f"- {c}" for c in choices)
+                    qinfo = f"{qtext}\n選択肢:\n" + "\n".join([f"- {c}" for c in choices])
                     if correct:
                         qinfo += f"
 正解と思われる選択肢: {correct}"
@@ -152,3 +149,4 @@ if uploaded_img:
         if answer:
             st.markdown("### ✅ 正解")
             st.markdown(answer)
+
