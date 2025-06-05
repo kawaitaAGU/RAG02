@@ -99,7 +99,7 @@ if uploaded_img:
     # === GPTによる解説生成 =========================================
     with st.spinner("GPTが解説を生成中..."):
         prompt_text = (
-            "以下の画像に含まれる問題に対して、正解とその根拠を説明し、各選択肢に対する解説をである調で記述せよ。類似問題を３題作成し説明文も示せ。各選択肢にも説明文を付けよ。"
+            "以下の画像に含まれる問題に対して、正解とその根拠を説明し、各選択肢に対する解説をである調で記述せよ。"
             + (f"\n以下は過去問から抽出した類似問題情報である：\n{rag_text}" if rag_text else "")
         )
 
@@ -121,7 +121,6 @@ if uploaded_img:
         result = response.choices[0].message.content.strip()
         st.subheader("💡 GPTの解説結果（構造化表示）")
 
-        # === 結果を構造化して表示 ==================================
         overview = ""
         answer = ""
         choices = {}
@@ -130,31 +129,4 @@ if uploaded_img:
         if overview_match:
             overview = overview_match.group(1).strip()
 
-        answer_match = re.search(r"【?正解】?\n?(.*?)(?=\n【|$)", result, re.DOTALL)
-        if answer_match:
-            answer = answer_match.group(1).strip()
-
-        choice_matches = re.findall(
-            r"^([①-⑤1-5a-eA-Eａ-ｅＡ-Ｅ])[:：]?\s*(.+?)(?=\n[①-⑤1-5a-eA-Eａ-ｅＡ-Ｅ][:：]|\n*$)",
-            result, re.MULTILINE | re.DOTALL
-        )
-        for label, text in choice_matches:
-            choices[label.strip()] = text.strip()
-
-        if overview:
-            st.markdown("### 📝 問題の概要")
-            st.markdown(overview)
-
-        if answer:
-            st.markdown("### ✅ 正解")
-            st.markdown(answer)
-
-        if choices:
-            st.markdown("### 🔍 選択肢の解説")
-            for label, text in choices.items():
-                st.markdown(f"**{label}**: {text}")
-
-        # 🔻以下を完全に削除しました：
-        # else:
-        #     st.markdown("### 📄 解説（分割できなかった場合）")
-        #     st.markdown(result)
+        answer_match = re.search(r"【?正解】?\n?(.*?)(?=\n
