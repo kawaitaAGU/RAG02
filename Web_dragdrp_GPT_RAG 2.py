@@ -52,6 +52,11 @@ if uploaded_img:
         )
         query_text = extract_response.choices[0].message.content.strip()
 
+    # === OCR結果の表示（参考） =====================================
+    with st.expander("📝 画像から読み取られた問題文・選択肢（OCR結果）", expanded=False):
+        st.markdown("以下は、画像から抽出された問題文と選択肢のテキストです（参考表示）。")
+        st.code(query_text, language="markdown")
+
     # === sample.csv を読み込んでRAG処理 ==========================
     rag_text = ""
     csv_path = Path("sample.csv")
@@ -83,15 +88,23 @@ if uploaded_img:
                     choices = [str(row[c]) for c in ['a', 'b', 'c', 'd', 'e'] if c in row and pd.notna(row[c])]
                     correct = str(row["解答"]) if "解答" in row and pd.notna(row["解答"]) else ""
 
-                    qinfo = f"{qtext}\n選択肢:\n" + "\n".join(f"- {c}" for c in choices)
+                    qinfo = f"{qtext}
+選択肢:
+" + "
+".join(f"- {c}" for c in choices)
                     if correct:
-                        qinfo += f"\n正解と思われる選択肢: {correct}"
+                        qinfo += f"
+正解と思われる選択肢: {correct}"
                     similar_questions.append(qinfo)
 
-                rag_text = "\n\n".join(similar_questions)
+                rag_text = "
+
+".join(similar_questions)
                 st.subheader("📚 類似問題（RAG）")
                 for q in similar_questions:
-                    st.markdown(f"```\n{q}\n```")
+                    st.markdown(f"```
+{q}
+```")
     except Exception as e:
         st.warning(f"CSVファイルの読み込みに失敗しました。RAGなしで進めます。\n\n詳細: {e}")
         rag_text = ""
@@ -99,7 +112,7 @@ if uploaded_img:
     # === GPTによる解説生成 =========================================
     with st.spinner("GPTが解説を生成中..."):
         prompt_text = (
-            "以下の画像に含まれる問題に対して、正解とその根拠を説明し、各選択肢に対する解説をである調で記述せよ。類似問題を3題作成しそれぞれの問題文の説明並びに、回答肢の説明をせよ。"
+            "以下の画像に含まれる問題に対して、正解とその根拠を説明し、各選択肢に対する解説をである調で記述せよ。"
             + (f"\n以下は過去問から抽出した類似問題情報である：\n{rag_text}" if rag_text else "")
         )
 
@@ -139,5 +152,3 @@ if uploaded_img:
         if answer:
             st.markdown("### ✅ 正解")
             st.markdown(answer)
-
-        # 選択肢の解説は表示しない（完全にスキップ）
