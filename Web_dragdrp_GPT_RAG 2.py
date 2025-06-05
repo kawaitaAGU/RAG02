@@ -90,18 +90,13 @@ if uploaded_img:
 
                     qinfo = f"{qtext}\n選択肢:\n" + "\n".join([f"- {c}" for c in choices])
                     if correct:
-                        qinfo += f"
-正解と思われる選択肢: {correct}"
+                        qinfo += f"\n正解と思われる選択肢: {correct}"
                     similar_questions.append(qinfo)
 
-                rag_text = "
-
-".join(similar_questions)
+                rag_text = "\n\n".join(similar_questions)
                 st.subheader("📚 類似問題（RAG）")
                 for q in similar_questions:
-                    st.markdown(f"```
-{q}
-```")
+                    st.markdown(f"```\n{q}\n```")
     except Exception as e:
         st.warning(f"CSVファイルの読み込みに失敗しました。RAGなしで進めます。\n\n詳細: {e}")
         rag_text = ""
@@ -149,4 +144,3 @@ if uploaded_img:
         if answer:
             st.markdown("### ✅ 正解")
             st.markdown(answer)
-
