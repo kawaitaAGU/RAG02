@@ -153,3 +153,8 @@ if uploaded_img:
             st.markdown("### 🔍 選択肢の解説")
             for label, text in choices.items():
                 st.markdown(f"**{label}**: {text}")
+
+        # 🔻以下を完全に削除しました：
+        # else:
+        #     st.markdown("### 📄 解説（分割できなかった場合）")
+        #     st.markdown(result)
