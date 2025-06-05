@@ -10,7 +10,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 import re
 from pathlib import Path
 
-# === OpenAI APIキーの初期化（Secrets） ============================
+# === OpenAI APIキーの初期化 ========================================
 if "OPENAI_API_KEY" not in st.secrets:
     st.error("OPENAI_API_KEY が未設定です。StreamlitのSecretsに追加してください。")
     st.stop()
@@ -29,7 +29,7 @@ if uploaded_img:
     # === 画像を画面に表示 =========================================
     st.image(uploaded_img, caption="アップロードされた画像", use_column_width=True)
 
-    # === 画像base64をセッションに保存 =============================
+    # === base64エンコードしてセッション保存 ========================
     image = Image.open(uploaded_img).convert("RGB")
     buffer = io.BytesIO()
     image.save(buffer, format="PNG")
@@ -54,10 +54,8 @@ if uploaded_img:
             temperature=0.0
         )
         query_text = extract_response.choices[0].message.content.strip()
-        st.subheader("🔍 抽出された問題文")
-        st.text_area("問題文", query_text, height=200)
 
-    # === sample.xlsx を自動読み込み ===============================
+    # === sample.xlsx を読み込みしてRAG検索 ========================
     rag_text = ""
     excel_path = Path("sample.xlsx")
     if not excel_path.exists():
@@ -101,11 +99,11 @@ if uploaded_img:
         st.warning(f"Excelファイルの読み込みに失敗しました。RAGなしで進めます。\n\n詳細: {e}")
         rag_text = ""
 
-    # === GPTによる解説生成（gpt-4o-2024-11-20） ====================
+    # === GPTによる解説生成 =========================================
     with st.spinner("GPTが解説を生成中..."):
         prompt_text = (
-            f"今送った画像の問題の解説をしてください。正解を明示し、根拠を説明してください。各選択肢に対する解説を書いてください。で、ある調で書いてください。"
-            + (f"\n以下は過去問から抽出した類似問題情報です：\n{rag_text}" if rag_text else "")
+            "以下の画像に含まれる問題に対して、正解とその根拠を説明し、各選択肢に対する解説をである調で記述せよ。"
+            + (f"\n以下は過去問から抽出した類似問題情報である：\n{rag_text}" if rag_text else "")
         )
 
         response = client.chat.completions.create(
@@ -126,7 +124,7 @@ if uploaded_img:
         result = response.choices[0].message.content.strip()
         st.subheader("💡 GPTの解説結果（構造化表示）")
 
-        # === 結果を構造化して表示 ================================
+        # === 結果を構造化して表示 ==================================
         overview = ""
         answer = ""
         choices = {}
